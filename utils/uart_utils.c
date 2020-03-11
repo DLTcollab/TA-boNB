@@ -70,7 +70,7 @@ void uart_write(const int fd, char *cmd) {
   ssize_t cmd_len = strlen(cmd);
   ssize_t wlen = write(fd, cmd, cmd_len);
   if (wlen != cmd_len) {
-    printf("Error from write: %ld, %d\n", wlen, errno);
+    printf("Error from write: %zd, %d\n", wlen, errno);
   }
   tcdrain(fd); /* delay for output */
 }
@@ -81,11 +81,13 @@ char *uart_read(const int fd) {
 
   ssize_t rdlen = read(fd, buf, sizeof(buf) - 1);
   if (rdlen > 0) {
-    // printf("buf = %s\n", buf);
+#ifdef DEBUG
+    printf("buf = %s\n", buf);
+#endif
     response = (char *)malloc(sizeof(char) * rdlen);
     strncpy(response, (char *)buf, READ_BUFFER_SIZE);
   } else if (rdlen < 0) {
-    printf("Error from read: %ld: %s\n", rdlen, strerror(errno));
+    printf("Error from read: %zd: %s\n", rdlen, strerror(errno));
   }
 
   return response;

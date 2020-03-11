@@ -62,7 +62,7 @@ int main(void) {
   printf("=============== Wrapper Test =============== \n");
   // TODO:request the hash of current order from hashchain and use it as
   // AES key hashchain would be another leagato original application
-  uint8_t private_key[AES_BLOCK_SIZE * 2] = {0};
+  uint8_t private_key[AES_KEY_SIZE] = {0};
   char id[IMSI_LEN + 1] = {0};
 #ifndef DEBUG
   if (get_aes_key(private_key) != 0) {
@@ -82,8 +82,8 @@ int main(void) {
 
   memset(ciphertext, 0, 1024);
   memset(plain, 0, 1024);
-  ciphertext_len = encrypt((char*)test_payload2, test_paylen2, ciphertext, 1024, iv, private_key, id);
-  decrypt(ciphertext, ciphertext_len, plain, 1024, iv, private_key);
+  ciphertext_len = ta_encrypt((char*)test_payload2, test_paylen2, ciphertext, 1024, iv, private_key, id);
+  ta_decrypt(ciphertext, ciphertext_len, plain, 1024, iv, private_key);
 
   /* compare payload */
   if (!memcmp(test_payload2, plain, test_paylen2)) {

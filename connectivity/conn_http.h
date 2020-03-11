@@ -12,7 +12,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 #include <stdbool.h>
 #include "defined_error.h"
 #include "http_parser.h"
@@ -22,8 +21,6 @@ extern "C" {
 #include "mbedtls/error.h"
 #include "mbedtls/net.h"
 #include "mbedtls/ssl.h"
-
-#define HTTP_OK 200
 
 char *http_res_body;
 

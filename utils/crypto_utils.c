@@ -1,4 +1,5 @@
 #include "crypto_utils.h"
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,7 @@
 
 // The device ID we are used here is IMSI. We could use other physical ID in the
 // future.
-int get_device_id(const char *device_id) {
+int get_device_id(uint8_t *device_id) {
   // TODO: replace cm command
   char result_buf[MAXLINE], *imsi;
   char cmd[] = "cm sim info";
@@ -29,7 +30,7 @@ int get_device_id(const char *device_id) {
     }
   }
 
-  strncpy((char *)device_id, imsi, IMSI_LEN);
+  memcpy(device_id, imsi, IMSI_LEN);
 
   if (pclose(fp) == -1) {
     perror("close FILE pointer");
@@ -39,7 +40,7 @@ int get_device_id(const char *device_id) {
 }
 
 // Get AES key with hashchain in legato originated app form.
-int get_aes_key(const uint8_t *key) {
+int get_aes_key(uint8_t *key) {
   // TODO: replace cm command
   char hash_chain_res[MAXLINE];
   char cmd[] = "cm sim info";
@@ -56,7 +57,7 @@ int get_aes_key(const uint8_t *key) {
     hash_chain_res[strlen(hash_chain_res) - 2] = '\0';
   }
 
-  strncpy((char *)key, hash_chain_res, AES_BLOCK_SIZE);
+  memcpy(key, hash_chain_res, CBC_IV_SIZE);
 
   if (pclose(fp) == -1) {
     perror("close FILE pointer");
@@ -66,18 +67,18 @@ int get_aes_key(const uint8_t *key) {
   return 0;
 }
 
-int aes_encrypt(const unsigned char *plaintext, int plaintext_len, const unsigned char *key, unsigned int keybits,
-                unsigned char iv[AES_BLOCK_SIZE], unsigned char *ciphertext, int ciphertext_len) {
+int aes_encrypt(const char *plaintext, int plaintext_len, const unsigned char *key, unsigned int keybits,
+                unsigned char iv[CBC_IV_SIZE], char *ciphertext, int ciphertext_len) {
   mbedtls_aes_context ctx;
   int status;
-  unsigned char buf[AES_BLOCK_SIZE];
+  unsigned char buf[CBC_IV_SIZE];
   int n = 0;
   char *err;
   /*
    * Initialise the encryption operation.
    */
   // Check ciphertext has enough space
-  int new_len = plaintext_len + (AES_BLOCK_SIZE - plaintext_len % 16);
+  int new_len = plaintext_len + (CBC_IV_SIZE - plaintext_len % CBC_IV_SIZE);
   if (new_len > ciphertext_len) {
     err = "ciphertext has not enough space";
     goto exit;
@@ -93,16 +94,16 @@ int aes_encrypt(const unsigned char *plaintext, int plaintext_len, const unsigne
   /*
    * Encrypt plaintext
    */
-  for (int i = 0; i < new_len; i += AES_BLOCK_SIZE) {
-    memset(buf, 0, AES_BLOCK_SIZE);
-    n = (new_len - i > AES_BLOCK_SIZE) ? 16 : (int)(new_len - i);
+  for (int i = 0; i < new_len; i += CBC_IV_SIZE) {
+    memset(buf, 0, CBC_IV_SIZE);
+    n = (new_len - i > CBC_IV_SIZE) ? CBC_IV_SIZE : (int)(new_len - i);
     memcpy(buf, plaintext + i, n);
-    if ((status = mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, AES_BLOCK_SIZE, iv, buf, buf)) != 0) {
+    if ((status = mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, CBC_IV_SIZE, iv, buf, buf)) != 0) {
       err = "aes decrpyt failed";
       goto exit;
     }
-    memcpy(ciphertext, buf, AES_BLOCK_SIZE);
-    ciphertext += AES_BLOCK_SIZE;
+    memcpy(ciphertext, buf, CBC_IV_SIZE);
+    ciphertext += CBC_IV_SIZE;
   }
 
   /* Clean up */
@@ -114,12 +115,12 @@ exit:
   return -1;
 }
 
-int aes_decrypt(const unsigned char *ciphertext, int ciphertext_len, const unsigned char *key, unsigned int keybits,
-                unsigned char iv[AES_BLOCK_SIZE], unsigned char *plaintext, int plaintext_len) {
+int aes_decrypt(const char *ciphertext, int ciphertext_len, const unsigned char *key, unsigned int keybits,
+                unsigned char iv[CBC_IV_SIZE], char *plaintext, int plaintext_len) {
   mbedtls_aes_context ctx;
   int status, n = 0;
   char *err;
-  uint8_t buf[AES_BLOCK_SIZE];
+  uint8_t buf[CBC_IV_SIZE];
   /* Create and initialise the context */
   mbedtls_aes_init(&ctx);
   memset(plaintext, 0, plaintext_len);
@@ -134,16 +135,16 @@ int aes_decrypt(const unsigned char *ciphertext, int ciphertext_len, const unsig
    * Provide the message to be decrypted, and obtain the plaintext output.
    */
 
-  for (int i = 0; i < ciphertext_len; i += AES_BLOCK_SIZE) {
-    memset(buf, 0, AES_BLOCK_SIZE);
-    n = (ciphertext_len - i > AES_BLOCK_SIZE) ? 16 : (int)(ciphertext_len - i);
+  for (int i = 0; i < ciphertext_len; i += CBC_IV_SIZE) {
+    memset(buf, 0, CBC_IV_SIZE);
+    n = (ciphertext_len - i > CBC_IV_SIZE) ? CBC_IV_SIZE : (int)(ciphertext_len - i);
     memcpy(buf, ciphertext + i, n);
-    if ((status = mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, AES_BLOCK_SIZE, iv, buf, buf)) != 0) {
+    if ((status = mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, CBC_IV_SIZE, iv, buf, buf)) != 0) {
       err = "aes decrpyt failed";
       goto exit;
     }
-    memcpy(plaintext, buf, AES_BLOCK_SIZE);
-    plaintext += AES_BLOCK_SIZE;
+    memcpy(plaintext, buf, CBC_IV_SIZE);
+    plaintext += CBC_IV_SIZE;
   }
 
   /* Clean up */
@@ -155,11 +156,11 @@ exit:
   return -1;
 }
 
-int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext, int ciphertext_len,
-            uint8_t iv[AES_BLOCK_SIZE], uint8_t key[AES_BLOCK_SIZE * 2], uint8_t device_id[IMSI_LEN + 1]) {
+int ta_encrypt(const char *plaintext, int plaintext_len, char *ciphertext, int ciphertext_len, uint8_t iv[CBC_IV_SIZE],
+               uint8_t key[AES_KEY_SIZE], uint8_t device_id[IMSI_LEN + 1]) {
   int new_len = 0;
   char *err = NULL;
-  uint8_t tmp[AES_BLOCK_SIZE];
+  uint8_t tmp[CBC_IV_SIZE];
   char nonce[IMSI_LEN + MAX_TIMESTAMP_LEN + 1 + 1] = {0};
   uint8_t digest[32];
   uint8_t buffer[MAXLINE];
@@ -178,23 +179,23 @@ int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *cipherte
   // fetch timestamp
   uint64_t timestamp = time(NULL);
   // concatenate (Device_ID, timestamp)
-  snprintf(nonce, IMSI_LEN + MAX_TIMESTAMP_LEN + 1, "%s-%ld", device_id, timestamp);
+  snprintf(nonce, IMSI_LEN + MAX_TIMESTAMP_LEN + 1, "%s-%" PRIu64, device_id, timestamp);
   // hash base data
 #ifndef DEBUG
   mbedtls_md_starts(&sha_ctx);
-  mbedtls_md_update(&sha_ctx, nonce, IMSI_LEN + MAX_TIMESTAMP_LEN);
+  mbedtls_md_update(&sha_ctx, (unsigned char *)nonce, IMSI_LEN + MAX_TIMESTAMP_LEN);
   mbedtls_md_finish(&sha_ctx, digest);
 
   mbedtls_md_starts(&sha_ctx);
   mbedtls_md_update(&sha_ctx, digest, 32);
   mbedtls_md_finish(&sha_ctx, digest);
 
-  for (int i = 0; i < 16; ++i) {
-    tmp[i] = digest[i] ^ digest[i + 16];
+  for (int i = 0; i < CBC_IV_SIZE; ++i) {
+    tmp[i] = digest[i] ^ digest[i + CBC_IV_SIZE];
   }
-  memcpy(iv, tmp, AES_BLOCK_SIZE);
+  memcpy(iv, tmp, CBC_IV_SIZE);
 #else
-  memcpy(tmp, iv, AES_BLOCK_SIZE);
+  memcpy(tmp, iv, CBC_IV_SIZE);
 #endif
   new_len = aes_encrypt(plaintext, plaintext_len, key, 256, tmp, ciphertext, ciphertext_len);
 #ifdef DEBUG
@@ -206,8 +207,8 @@ exit:
   return new_len;
 }
 
-int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext, int plaintext_len,
-            uint8_t iv[AES_BLOCK_SIZE], uint8_t key[AES_BLOCK_SIZE * 2]) {
+int ta_decrypt(const char *ciphertext, int ciphertext_len, char *plaintext, int plaintext_len, uint8_t iv[CBC_IV_SIZE],
+               uint8_t key[AES_KEY_SIZE]) {
   aes_decrypt(ciphertext, ciphertext_len, key, 256, iv, plaintext, plaintext_len);
   return 0;
 }

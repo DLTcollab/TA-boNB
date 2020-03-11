@@ -15,20 +15,21 @@
 extern "C" {
 #endif
 
-#define AES_BLOCK_SIZE 16
+#define CBC_IV_SIZE 16
+#define AES_KEY_SIZE 32
 #define MAXLINE 1024
 #define IMSI_LEN 15
 
-int get_device_id(const char *device_id);
-int get_aes_key(const uint8_t *key);
-int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext, int ciphertext_len, uint8_t iv[16],
-            uint8_t key[AES_BLOCK_SIZE * 2], uint8_t device_id[IMSI_LEN + 1]);
-int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext, int plaintext_len, uint8_t iv[16],
-            uint8_t key[AES_BLOCK_SIZE * 2]);
-int aes_encrypt(const unsigned char *plaintext, int plaintext_len, const unsigned char *key, unsigned int keybits,
-                unsigned char iv[16], unsigned char *ciphertext, int ciphertext_len);
-int aes_decrypt(const unsigned char *ciphertext, int ciphertext_len, const unsigned char *key, unsigned int keybits,
-                unsigned char iv[16], unsigned char *plaintext, int plaintext_len);
+int get_device_id(uint8_t *device_id);
+int get_aes_key(uint8_t *key);
+int ta_encrypt(const char *plaintext, int plaintext_len, char *ciphertext, int ciphertext_len, uint8_t iv[CBC_IV_SIZE],
+               uint8_t key[AES_KEY_SIZE], uint8_t device_id[IMSI_LEN + 1]);
+int ta_decrypt(const char *ciphertext, int ciphertext_len, char *plaintext, int plaintext_len, uint8_t iv[CBC_IV_SIZE],
+               uint8_t key[AES_KEY_SIZE]);
+int aes_encrypt(const char *plaintext, int plaintext_len, const unsigned char *key, unsigned int keybits,
+                unsigned char iv[CBC_IV_SIZE], char *ciphertext, int ciphertext_len);
+int aes_decrypt(const char *ciphertext, int ciphertext_len, const unsigned char *key, unsigned int keybits,
+                unsigned char iv[CBC_IV_SIZE], char *plaintext, int plaintext_len);
 
 #ifdef __cplusplus
 }
