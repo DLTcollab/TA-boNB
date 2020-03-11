@@ -1,15 +1,8 @@
-OBJS = crypto_utils.o serializer.o tryte_byte_conv.o uart_utils.o
+UTILS_OBJS = crypto_utils.o serializer.o tryte_byte_conv.o url.o tryte_msg.o logger.o
 
-ifeq ($(KEY_DEBUG), n)
-UTILS_CFLAGS = $(CFLAGS)
-else
-UTILS_CFLAGS = $(CFLAGS) -DKEY_DEBUG
-endif
-
-all: $(OBJS)
-
+all: $(UTILS_OBJS)
 %.o: %.c
-	$(CC) -c $(UTILS_CFLAGS) $(INCLUDES) -o $@ $^
+	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $^
 
 clean:
 	rm -f *.o

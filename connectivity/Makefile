@@ -1,5 +1,3 @@
-INCLUDES := -I$(THIRD_PARTY_PATH)/mbedtls/include -I$(THIRD_PARTY_PATH)/http-parser -I$(ROOT_DIR)/utils
-
 all: conn_http.o
 
 .NOTPARALLEL:

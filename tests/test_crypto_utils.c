@@ -72,21 +72,10 @@ int main(void) {
   // AES key hashchain would be another leagato original application
   uint8_t private_key[AES_BLOCK_SIZE * 2] = {0};
   char id[IMSI_LEN + 1] = {0};
-#ifndef DEBUG
-  if (get_aes_key(private_key) != 0) {
-    fprintf(stderr, "%s\n", "get aes key error");
-    return -1;
-  }
-  // fetch Device_ID (IMSI, len <= 15)
-  if (get_device_id(id) != 0) {
-    fprintf(stderr, "%s\n", "get device id error");
-    return -1;
-  }
-#else
+
   memcpy(id, device_id, 16);
   memcpy(private_key, key, 16);
   memcpy(iv, iv_global, 16);
-#endif
 
   memset(ciphertext, 0, 1024);
   memset(plain, 0, 1024);

@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2019-2020 BiiLabs Co., Ltd. and Contributors
+ * All Rights Reserved.
+ * This is free software; you can redistribute it and/or modify it under the
+ * terms of the MIT license. A copy of the license can be found in the file
+ * "LICENSE" at the root of this distribution.
+ */
+
 #include "crypto_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,66 +16,8 @@
 
 #define MAX_TIMESTAMP_LEN 20
 
-// The device ID we are used here is IMSI. We could use other physical ID in the
-// future.
-int get_device_id(const char *device_id) {
-  // TODO: replace cm command
-  char result_buf[MAXLINE], *imsi;
-  char cmd[] = "cm sim info";
-  FILE *fp;
-
-  fp = popen(cmd, "r");
-  if (NULL == fp) {
-    perror("popen open error");
-    return -1;
-  }
-
-  while (fgets(result_buf, sizeof(result_buf), fp) != NULL) {
-    if (strstr(result_buf, "IMSI")) {
-      result_buf[strlen(result_buf) - 1] = '\0';
-      imsi = strtok(result_buf + 5, " ");
-    }
-  }
-
-  strncpy((char *)device_id, imsi, IMSI_LEN);
-
-  if (pclose(fp) == -1) {
-    perror("close FILE pointer");
-    return -1;
-  }
-  return 0;
-}
-
-// Get AES key with hashchain in legato originated app form.
-int get_aes_key(const uint8_t *key) {
-  // TODO: replace cm command
-  char hash_chain_res[MAXLINE];
-  char cmd[] = "cm sim info";
-  FILE *fp;
-
-  fp = popen(cmd, "r");
-
-  if (NULL == fp) {
-    perror("popen open error");
-    return -1;
-  }
-
-  if (fgets(hash_chain_res, sizeof(hash_chain_res), fp) != NULL) {
-    hash_chain_res[strlen(hash_chain_res) - 2] = '\0';
-  }
-
-  strncpy((char *)key, hash_chain_res, AES_BLOCK_SIZE);
-
-  if (pclose(fp) == -1) {
-    perror("close FILE pointer");
-    return -1;
-  }
-
-  return 0;
-}
-
-int aes_encrypt(const unsigned char *plaintext, int plaintext_len, const unsigned char *key, unsigned int keybits,
-                unsigned char iv[AES_BLOCK_SIZE], unsigned char *ciphertext, int ciphertext_len) {
+int aes_encrypt(const char *plaintext, int plaintext_len, const unsigned char *key, unsigned int keybits,
+                unsigned char iv[AES_BLOCK_SIZE], char *ciphertext, int ciphertext_len) {
   mbedtls_aes_context ctx;
   int status;
   unsigned char buf[AES_BLOCK_SIZE];
@@ -114,8 +64,8 @@ exit:
   return -1;
 }
 
-int aes_decrypt(const unsigned char *ciphertext, int ciphertext_len, const unsigned char *key, unsigned int keybits,
-                unsigned char iv[AES_BLOCK_SIZE], unsigned char *plaintext, int plaintext_len) {
+int aes_decrypt(const char *ciphertext, int ciphertext_len, const unsigned char *key, unsigned int keybits,
+                unsigned char iv[AES_BLOCK_SIZE], char *plaintext, int plaintext_len) {
   mbedtls_aes_context ctx;
   int status, n = 0;
   char *err;
@@ -155,8 +105,8 @@ exit:
   return -1;
 }
 
-int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *ciphertext, int ciphertext_len,
-            uint8_t iv[AES_BLOCK_SIZE], uint8_t key[AES_BLOCK_SIZE * 2], uint8_t device_id[IMSI_LEN + 1]) {
+int encrypt(const char *plaintext, int plaintext_len, char *ciphertext, int ciphertext_len, uint8_t iv[AES_BLOCK_SIZE],
+            uint8_t key[AES_BLOCK_SIZE * 2], uint8_t device_id[IMSI_LEN + 1]) {
   int new_len = 0;
   char *err = NULL;
   uint8_t tmp[AES_BLOCK_SIZE];
@@ -206,8 +156,8 @@ exit:
   return new_len;
 }
 
-int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *plaintext, int plaintext_len,
-            uint8_t iv[AES_BLOCK_SIZE], uint8_t key[AES_BLOCK_SIZE * 2]) {
+int decrypt(const char *ciphertext, int ciphertext_len, char *plaintext, int plaintext_len, uint8_t iv[AES_BLOCK_SIZE],
+            uint8_t key[AES_BLOCK_SIZE * 2]) {
   aes_decrypt(ciphertext, ciphertext_len, key, 256, iv, plaintext, plaintext_len);
   return 0;
 }
