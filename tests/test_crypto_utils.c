@@ -80,8 +80,8 @@ void test_wrapper(void) {
   memcpy(iv, iv_global, AES_BLOCK_SIZE);
 #endif
 
-  ciphertext_len = encrypt((char*)test_payload2, test_paylen2, ciphertext, MAXLINE, iv, private_key, id);
-  decrypt(ciphertext, ciphertext_len, plain, MAXLINE, iv, private_key);
+  ciphertext_len = encrypt((char*)test_payload2, test_paylen2, private_key, id, iv, ciphertext, MAXLINE);
+  decrypt(ciphertext, ciphertext_len, private_key, iv, plain, MAXLINE);
 
   /* compare payload */
   TEST_ASSERT_EQUAL_UINT8_ARRAY(test_payload2, plain, test_paylen2);

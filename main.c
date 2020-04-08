@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
   memcpy(private_key, key, 16);
   memcpy(iv, iv_global, 16);
 #endif
-      ciphertext_len = encrypt(raw_msg, strlen((char *)raw_msg), ciphertext, MAX_MSG_LEN, iv, private_key, id);
+      ciphertext_len = encrypt(raw_msg, strlen((char *)raw_msg), private_key, id, iv, ciphertext, MAX_MSG_LEN);
       if (ciphertext_len == 0) {
         fprintf(stderr, "%s\n", "encrypt msg error");
         return -1;

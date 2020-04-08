@@ -26,33 +26,33 @@ extern "C" {
  *
  * @param[in] plaintext The text to be encrypted
  * @param[in] plaintext_len Plaintext length
- * @param[out] ciphertext Ciphrtext
- * @param[in] ciphertext_len Ciphertext length
- * @param[in, out] iv[AES_BLOCK_SIZE] Initialization vector
  * @param[in] key[AES_CBC_KEY_SIZE] Encryption key
  * @param[in] device_id[IMSI_LEN + 1] Device id
+ * @param[in, out] iv[AES_BLOCK_SIZE] Initialization vector
+ * @param[out] ciphertext Ciphrtext
+ * @param[in] ciphertext_len Ciphertext length
  *
  * @return
  * - Ciphertext text new length on success
  * - 0 on error
  */
-int encrypt(const char *plaintext, int plaintext_len, char *ciphertext, int ciphertext_len, uint8_t iv[AES_BLOCK_SIZE],
-            uint8_t key[AES_CBC_KEY_SIZE], uint8_t device_id[IMSI_LEN + 1]);
+int encrypt(const char *plaintext, int plaintext_len, uint8_t key[AES_CBC_KEY_SIZE], uint8_t device_id[IMSI_LEN + 1],
+            uint8_t iv[AES_BLOCK_SIZE], char *ciphertext, int ciphertext_len);
 
 /**
  * @brief Decrypt ciphertext
  *
  * @param[in] ciphertext Ciphertext
  * @param[in] ciphertext_len Ciphertext length
+ * @param[in] key[AES_CBC_KEY_SIZE] Decryption key
+ * @param[in] iv[AES_BLOCK_SIZE] Initialization vector
  * @param[out] plaintext Plaintext
  * @param[in] plaintext_len Plaintext length
- * @param[in] iv[AES_BLOCK_SIZE] Initialization vector
- * @param[in] key[AES_CBC_KEY_SIZE] Decryption key
  *
  * @return #retcode_t
  */
-retcode_t decrypt(const char *ciphertext, int ciphertext_len, char *plaintext, int plaintext_len,
-                  uint8_t iv[AES_BLOCK_SIZE], uint8_t key[AES_CBC_KEY_SIZE]);
+retcode_t decrypt(const char *ciphertext, int ciphertext_len, uint8_t key[AES_CBC_KEY_SIZE], uint8_t iv[AES_BLOCK_SIZE],
+                  char *plaintext, int plaintext_len);
 
 /**
  * @brief Implementation of AES encryption algorithm
