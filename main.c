@@ -19,7 +19,7 @@
 #include "utils/trytes.h"
 #include "utils/uart_utils.h"
 
-#define HOST "tangle-accel.puyuma.org"
+#define HOST "tangle-accel.biilabs.io"
 #define PORT "443"
 #define API "transaction/"
 #define SSL_SEED "nonce"
