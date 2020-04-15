@@ -16,7 +16,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "ca_cert.h"
 #include "conn_http.h"
 
 #define MAX_PORT_LEN 5
@@ -59,8 +58,7 @@ retcode_t http_open(connect_info_t *const info, char const *const seed_nonce, ch
       return RET_HTTP_INIT;
     }
 
-    // TODO Change the PEM file path
-    ret = mbedtls_x509_crt_parse(info->cacert, (const unsigned char *)mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
+    ret = mbedtls_x509_crt_parse(info->cacert, ca_crt_pem, ca_crt_pem_len);
     if (ret < 0) {
       printf("error: mbedtls_x509_crt_parse returned -0x%x\n\n", -ret);
       return RET_HTTP_CERT;
@@ -79,9 +77,8 @@ retcode_t http_open(connect_info_t *const info, char const *const seed_nonce, ch
     printf("error: mbedtls_ssl_config_defaults returned %d\n\n", ret);
     return RET_HTTP_SSL;
   }
-
-  // TODO we may need to set the mode into MBEDTLS_SSL_VERIFY_REQUIRED
-  mbedtls_ssl_conf_authmode(info->ssl_config, MBEDTLS_SSL_VERIFY_OPTIONAL);
+  mbedtls_ssl_conf_ca_chain(info->ssl_config, info->cacert, NULL);
+  mbedtls_ssl_conf_authmode(info->ssl_config, MBEDTLS_SSL_VERIFY_REQUIRED);
 
   mbedtls_ssl_conf_rng(info->ssl_config, mbedtls_ctr_drbg_random, info->ctr_drbg);
   mbedtls_ssl_conf_dbg(info->ssl_config, mbedtls_debug, stdout);
@@ -105,13 +102,12 @@ retcode_t http_open(connect_info_t *const info, char const *const seed_nonce, ch
   while (ret != 0) {
     if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
       printf("error: mbedtls_ssl_handshake returned -0x%x\n\n", -ret);
+      mbedtls_ssl_session_reset(info->ssl_ctx);
       return RET_HTTP_SSL;
     }
   }
 
-#if 0
   // Verify the server X.509 certificate
-  /* In real life, we probably want to bail out when ret != 0 */
   uint32_t flags = mbedtls_ssl_get_verify_result(info->ssl_ctx);
   if (flags != 0) {
     char vrfy_buf[512];
@@ -119,7 +115,7 @@ retcode_t http_open(connect_info_t *const info, char const *const seed_nonce, ch
     mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", flags);
     printf("error: %s\n", vrfy_buf);
   }
-#endif
+
   return RET_OK;
 }
 

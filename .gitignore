@@ -39,3 +39,4 @@ addr_log.log
 tests/build/
 *.o.d
 */*.o.d
+*.inc

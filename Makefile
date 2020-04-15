@@ -18,6 +18,7 @@ TEST_PATH = $(ROOT_DIR)/tests
 UTILS_PATH = $(ROOT_DIR)/utils
 CONNECTIVITY_PATH = $(ROOT_DIR)/connectivity
 HAL_PATH = $(ROOT_DIR)/hal
+PEM_PATH = $(ROOT_DIR)/pem
 export THIRD_PARTY_PATH ROOT_DIR UTILS_PATH MBEDTLS_PATH UNITY_PATH HAL_PATH
 
 ifeq ($(DEBUG), n)
@@ -39,10 +40,12 @@ OBJS += $(foreach x,$(SUBDIR),$(patsubst %.c,%.o,$(wildcard $(x)/*.c)))
 DEPS += $(foreach x,$(SUBDIR),$(patsubst %.c,%.o.d,$(wildcard $(x)/*.c)))
 export OBJS
 
-.SUFFIXES:.c .o
-.PHONY: all clean test git-hook utils
+PEM := $(PEM_PATH)/cert.pem
 
-all: git-hook $(OBJS) ta_client mbedtls_make utils
+.SUFFIXES:.c .o
+.PHONY: all clean test git-hook utils cert check_pem
+
+all: git-hook cert $(OBJS) ta_client mbedtls_make utils
 
 ta_client: mbedtls_make utils
 	@echo Linking: $@ ....
@@ -53,13 +56,29 @@ utils:
 	$(MAKE) -C $(HTTP_PARSER_PATH) http_parser.o
 test: utils
 	$(MAKE) -C $(TEST_PATH)
-%.o:%.c
-	$(CC) -v -c $(CFLAGS) $(INCLUDES) -MMD -MF $@.d -o $@ $<
+%.o:%.c cert
+	$(CC) -c $(CFLAGS) $(INCLUDES) -MMD -MF $@.d -o $@ $<
 
 hal:
 	$(MAKE) -C $(HAL_PATH)
+cert: check_pem
+	@xxd -i $(PEM) > connectivity/ca_crt.inc
+	@sed -E \
+		-e 's/(unsigned char)(.*)(\[\])(.*)/echo "\1 ca_crt_pem\3\4"/ge' 	    \
+		-e 's/(unsigned int)(.*)(=)(.*)/echo "\1 ca_crt_pem_len \3\4"/ge' 	    \
+		 -e 's/^unsigned/static &/' \
+		 -e 's/(.*)(pem_len = )([0-9]+)(.*)/echo "\1\2$$((\3+1))\4"/ge' \
+		 -e 's/(0[xX][[[:xdigit:]]+)$$/\1, 0x0/g' \
+	     -i connectivity/ca_crt.inc
+	@if ! grep -q "ca_crt.inc" connectivity/conn_http.c; then \
+		sed -e '/conn_http.h/a\#include "ca_crt.inc"' -i connectivity/conn_http.c; \
+	fi
+check_pem:
+ifndef PEM
+	$(error PEM is not set)
+endif
 
-clean: clean_client clean_third_party clean_test clean_devices
+clean: clean_client clean_third_party clean_test clean_devices clean_cert
 
 clean_test:
 	$(MAKE) -C $(TEST_PATH) clean
@@ -69,6 +88,9 @@ clean_client:
 
 clean_devices:
 	$(MAKE) -C $(HAL_PATH) clean
+
+clean_cert:
+	$(RM) $(CONNECTIVITY_PATH)/*.inc
 
 clean_third_party: clean_mbedtls clean_http_parser
 
